@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .offline-message {
+      display: none;
+      color: red;
+      font-size: 24px;
+    }
+
+    .redirect-animation {
+      display: none;
+      font-size: 20px;
+      color: green;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes redirectSlide {
+      0% { transform: translateY(100%); }
+      100% { transform: translateY(0); }
+    }
+
+    .redirecting {
+      animation: fadeIn 1s, redirectSlide 1s;
+    }
+    img {
+            max-width: 50%;
+            height: auto;
+        }
+  </style>
+</head>
+<body>
+  <h1>Internet Connectivity Check</h1>
+  <p class="offline-message">You are offline. Please check your internet connection.</p>
+  <img src="1.webp" alt="Offline Image">
+  <p class="redirect-animation">You are online! Redirecting...</p>
+
+  <script>
+    const offlineMessage = document.querySelector('.offline-message');
+    const redirectMessage = document.querySelector('.redirect-animation');
+
+    function checkConnection() {
+      if (navigator.onLine) {
+        offlineMessage.style.display = 'none';
+        redirectMessage.style.display = 'block';
+        redirectMessage.classList.add('redirecting');
+
+        setTimeout(() => {
+          window.location.href = "https://example.com"; // Redirect to this URL when online
+        }, 100); // 0.1-second delay for animation
+      } else {
+        offlineMessage.style.display = 'block';
+        redirectMessage.style.display = 'none';
+      }
+    }
+
+    window.addEventListener('load', checkConnection);
+    window.addEventListener('online', checkConnection);
+    window.addEventListener('offline', checkConnection);
+  </script>
+</body>
+</html>
