@@ -3,228 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ToolHub - Discover the Best Tools</title>
-    <meta name="description" content="Discover and explore the best tools for productivity, development, design, and more. Find the perfect tool for your needs.">
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>BloggerTools Hub - Discover the Perfect Tools for Your Blog</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#6366f1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="ToolHub">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
 </head>
 <body>
     <!-- Header -->
     <header class="header">
-        <nav class="nav container">
-            <div class="nav__brand">
-                <h1 class="brand__title">
-                    <i class="fas fa-tools brand__icon"></i>
-                    ToolHub
-                </h1>
-                <p class="brand__subtitle">Discover the Best Tools</p>
-            </div>
-            
-            <div class="nav__actions">
-                <button class="btn btn--secondary" id="submitTool">
-                    <i class="fas fa-plus"></i>
-                    Submit Tool
-                </button>
-                <button class="btn btn--primary" id="subscribe">
-                    <i class="fas fa-bell"></i>
-                    Subscribe
-                </button>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <i class="fas fa-blog"></i>
+                    <span>BloggerTools Hub</span>
+                </div>
+                <div class="nav-menu">
+                    <a href="#home" class="nav-link">Home</a>
+                    <a href="#tools" class="nav-link">Tools</a>
+                    <a href="#categories" class="nav-link">Categories</a>
+                    <a href="#about" class="nav-link">About</a>
+                </div>
+                <div class="nav-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
             </div>
         </nav>
     </header>
 
     <!-- Hero Section -->
-    <section class="hero">
+    <section id="home" class="hero">
         <div class="container">
-            <div class="hero__content">
-                <h2 class="hero__title">Find the Perfect Tool for Your Project</h2>
-                <p class="hero__description">
-                    Explore our curated collection of tools for productivity, development, design, marketing, and more.
-                    All tools are carefully vetted and maintained by our community.
-                </p>
-                
-                <!-- Search Bar -->
-                <div class="search__container">
-                    <div class="search__wrapper">
-                        <i class="fas fa-search search__icon"></i>
-                        <input 
-                            type="text" 
-                            class="search__input" 
-                            placeholder="Search tools, categories, or descriptions..."
-                            id="searchInput"
-                            autocomplete="off"
-                        >
-                        <button class="search__clear" id="clearSearch">
-                            <i class="fas fa-times"></i>
-                        </button>
+            <div class="hero-content">
+                <h1>Discover the Perfect Tools for Your Blog</h1>
+                <p>Find the right blogging tools, plugins, and resources to grow your audience, create better content, and boost your online presence.</p>
+                <div class="hero-search">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="search-input" placeholder="Search for tools, categories, or features...">
+                        <button class="search-btn">Search</button>
+                    </div>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number" id="total-tools">500+</span>
+                        <span class="stat-label">Tools Available</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">12</span>
+                        <span class="stat-label">Categories</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">10K+</span>
+                        <span class="stat-label">Happy Bloggers</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Main Content -->
-    <main class="main">
+    <!-- Categories Section -->
+    <section id="categories" class="categories">
         <div class="container">
-            <!-- Category Filter -->
-            <section class="filters">
-                <div class="filters__header">
-                    <h3 class="filters__title">Categories</h3>
-                    <div class="filters__stats">
-                        <span class="stats__count" id="toolCount">Loading...</span>
-                        <span class="stats__label">tools available</span>
-                    </div>
+            <div class="section-header">
+                <h2>Browse by Category</h2>
+                <p>Explore tools organized by functionality to find exactly what you need</p>
+            </div>
+            <div class="category-filters">
+                <button class="category-btn active" data-category="all">All Tools</button>
+                <button class="category-btn" data-category="writing">Writing & Editing</button>
+                <button class="category-btn" data-category="seo">SEO & Analytics</button>
+                <button class="category-btn" data-category="design">Design & Graphics</button>
+                <button class="category-btn" data-category="social">Social Media</button>
+                <button class="category-btn" data-category="email">Email Marketing</button>
+                <button class="category-btn" data-category="monetization">Monetization</button>
+                <button class="category-btn" data-category="hosting">Hosting & Domain</button>
+                <button class="category-btn" data-category="productivity">Productivity</button>
+                <button class="category-btn" data-category="plugins">WordPress Plugins</button>
+                <button class="category-btn" data-category="security">Security</button>
+                <button class="category-btn" data-category="backup">Backup & Recovery</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tools Section -->
+    <section id="tools" class="tools">
+        <div class="container">
+            <div class="section-header">
+                <h2>Featured Tools</h2>
+                <p>Hand-picked tools that can transform your blogging journey</p>
+            </div>
+            
+            <!-- Filter and Sort Controls -->
+            <div class="tools-controls">
+                <div class="filters">
+                    <select id="price-filter">
+                        <option value="all">All Prices</option>
+                        <option value="free">Free</option>
+                        <option value="freemium">Freemium</option>
+                        <option value="paid">Paid</option>
+                    </select>
+                    <select id="rating-filter">
+                        <option value="all">All Ratings</option>
+                        <option value="5">5 Stars</option>
+                        <option value="4">4+ Stars</option>
+                        <option value="3">3+ Stars</option>
+                    </select>
                 </div>
-                
-                <div class="filters__container" id="categoryFilters">
-                    <!-- Categories will be dynamically generated -->
+                <div class="sort-options">
+                    <select id="sort-by">
+                        <option value="popular">Most Popular</option>
+                        <option value="rating">Highest Rated</option>
+                        <option value="name">Name A-Z</option>
+                        <option value="newest">Newest First</option>
+                    </select>
                 </div>
-            </section>
+            </div>
 
             <!-- Tools Grid -->
-            <section class="tools">
-                <div class="tools__header">
-                    <h3 class="tools__title">Featured Tools</h3>
-                    <div class="tools__controls">
-                        <select class="sort__select" id="sortSelect">
-                            <option value="name">Sort by Name</option>
-                            <option value="category">Sort by Category</option>
-                            <option value="newest">Newest First</option>
-                            <option value="popular">Most Popular</option>
-                        </select>
-                        
-                        <div class="view__toggle">
-                            <button class="view__btn view__btn--active" data-view="grid">
-                                <i class="fas fa-th"></i>
-                            </button>
-                            <button class="view__btn" data-view="list">
-                                <i class="fas fa-list"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <div class="tools-grid" id="tools-grid">
+                <!-- Tools will be dynamically loaded here -->
+            </div>
 
-                <!-- Loading State -->
-                <div class="loading" id="loading">
-                    <div class="loading__spinner"></div>
-                    <p class="loading__text">Loading amazing tools...</p>
-                </div>
-
-                <!-- Tools Grid Container -->
-                <div class="tools__grid" id="toolsGrid">
-                    <!-- Tool cards will be dynamically generated -->
-                </div>
-
-                <!-- No Results State -->
-                <div class="no-results" id="noResults" style="display: none;">
-                    <div class="no-results__icon">
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <h3 class="no-results__title">No tools found</h3>
-                    <p class="no-results__description">
-                        Try adjusting your search terms or browse different categories.
-                    </p>
-                    <button class="btn btn--primary" id="clearFilters">
-                        Clear All Filters
-                    </button>
-                </div>
-
-                <!-- Load More Button -->
-                <div class="tools__actions" id="loadMoreContainer" style="display: none;">
-                    <button class="btn btn--outline btn--large" id="loadMoreBtn">
-                        <i class="fas fa-plus"></i>
-                        Load More Tools
-                    </button>
-                </div>
-            </section>
+            <!-- Load More Button -->
+            <div class="load-more-container">
+                <button class="load-more-btn" id="load-more">Load More Tools</button>
+            </div>
         </div>
-    </main>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter">
+        <div class="container">
+            <div class="newsletter-content">
+                <h2>Stay Updated with Latest Tools</h2>
+                <p>Get notified about new tools, updates, and exclusive deals delivered to your inbox</p>
+                <form class="newsletter-form">
+                    <input type="email" placeholder="Enter your email address" required>
+                    <button type="submit">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="footer__content">
-                <div class="footer__brand">
-                    <h3 class="footer__title">ToolHub</h3>
-                    <p class="footer__description">
-                        Discover and explore the best tools to supercharge your productivity and creativity.
-                    </p>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <i class="fas fa-blog"></i>
+                        <span>BloggerTools Hub</span>
+                    </div>
+                    <p>Your ultimate destination for discovering the best blogging tools and resources.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                    </div>
                 </div>
-                
-                <div class="footer__links">
-                    <div class="footer__section">
-                        <h4 class="footer__heading">Platform</h4>
-                        <ul class="footer__list">
-                            <li><a href="#" class="footer__link">Browse Tools</a></li>
-                            <li><a href="#" class="footer__link">Submit Tool</a></li>
-                            <li><a href="#" class="footer__link">Categories</a></li>
-                            <li><a href="#" class="footer__link">Featured</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="footer__section">
-                        <h4 class="footer__heading">Community</h4>
-                        <ul class="footer__list">
-                            <li><a href="#" class="footer__link">Newsletter</a></li>
-                            <li><a href="#" class="footer__link">Blog</a></li>
-                            <li><a href="#" class="footer__link">Discord</a></li>
-                            <li><a href="#" class="footer__link">Twitter</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="footer__section">
-                        <h4 class="footer__heading">Support</h4>
-                        <ul class="footer__list">
-                            <li><a href="#" class="footer__link">Help Center</a></li>
-                            <li><a href="#" class="footer__link">Contact</a></li>
-                            <li><a href="#" class="footer__link">Privacy</a></li>
-                            <li><a href="#" class="footer__link">Terms</a></li>
-                        </ul>
-                    </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#tools">All Tools</a></li>
+                        <li><a href="#categories">Categories</a></li>
+                        <li><a href="#about">About Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Categories</h3>
+                    <ul>
+                        <li><a href="#" data-category="writing">Writing Tools</a></li>
+                        <li><a href="#" data-category="seo">SEO Tools</a></li>
+                        <li><a href="#" data-category="design">Design Tools</a></li>
+                        <li><a href="#" data-category="social">Social Media</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <ul>
+                        <li><a href="#">Contact Us</a></li>
+                        <li><a href="#">Submit a Tool</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
                 </div>
             </div>
-            
-            <div class="footer__bottom">
-                <p class="footer__copyright">
-                    © 2025 ToolHub. All rights reserved. Made with ❤️ for the developer community.
-                </p>
-                <div class="footer__social">
-                    <a href="#" class="social__link"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="social__link"><i class="fab fa-github"></i></a>
-                    <a href="#" class="social__link"><i class="fab fa-linkedin"></i></a>
-                    <a href="#" class="social__link"><i class="fab fa-discord"></i></a>
-                </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 BloggerTools Hub. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
-    <!-- Tool Modal -->
-    <div class="modal" id="toolModal">
-        <div class="modal__overlay" id="modalOverlay"></div>
-        <div class="modal__content">
-            <div class="modal__header">
-                <h3 class="modal__title" id="modalTitle">Tool Details</h3>
-                <button class="modal__close" id="modalClose">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal__body" id="modalBody">
-                <!-- Modal content will be dynamically populated -->
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loading-spinner">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Tool Detail Modal -->
+    <div class="modal" id="tool-modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-body" id="modal-body">
+                <!-- Tool details will be loaded here -->
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="tools-data.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

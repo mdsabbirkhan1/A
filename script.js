@@ -1,666 +1,632 @@
-// Global State Management
-class ToolHub {
-    constructor() {
-        this.currentCategory = 'all';
-        this.currentQuery = '';
-        this.currentSort = 'name';
-        this.currentView = 'grid';
-        this.displayedTools = 0;
-        this.toolsPerPage = 12;
-        this.filteredTools = [];
-        this.isLoading = false;
+// Global variables
+let allTools = [];
+let filteredTools = [];
+let currentPage = 1;
+const toolsPerPage = 12;
+let currentCategory = 'all';
+let currentPriceFilter = 'all';
+let currentRatingFilter = 'all';
+let currentSort = 'popular';
+
+// DOM elements
+const toolsGrid = document.getElementById('tools-grid');
+const loadMoreBtn = document.getElementById('load-more');
+const searchInput = document.getElementById('search-input');
+const categoryBtns = document.querySelectorAll('.category-btn');
+const priceFilter = document.getElementById('price-filter');
+const ratingFilter = document.getElementById('rating-filter');
+const sortSelect = document.getElementById('sort-by');
+const modal = document.getElementById('tool-modal');
+const modalBody = document.getElementById('modal-body');
+const closeModal = document.querySelector('.close-modal');
+const loadingSpinner = document.getElementById('loading-spinner');
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    loadToolsData();
+    initializeEventListeners();
+    updateStats();
+});
+
+// Load tools data from XML
+async function loadToolsData() {
+    try {
+        showLoading(true);
+        const response = await fetch('tools-data.xml');
+        const xmlText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
         
-        this.init();
+        allTools = parseXMLToTools(xmlDoc);
+        filteredTools = [...allTools];
+        displayTools();
+        updateToolCount();
+        
+    } catch (error) {
+        console.error('Error loading tools data:', error);
+        showError('Failed to load tools data. Please try again later.');
+    } finally {
+        showLoading(false);
     }
+}
+
+// Parse XML document to tools array
+function parseXMLToTools(xmlDoc) {
+    const toolElements = xmlDoc.querySelectorAll('tool');
+    const tools = [];
     
-    // Initialize the application
-    init() {
-        this.cacheElements();
-        this.bindEvents();
-        this.loadInitialData();
-        this.setupIntersectionObserver();
-    }
+    toolElements.forEach(toolEl => {
+        const tool = {
+            id: toolEl.getAttribute('id'),
+            name: getTextContent(toolEl, 'name'),
+            category: getTextContent(toolEl, 'category'),
+            icon: getTextContent(toolEl, 'icon'),
+            iconBg: getTextContent(toolEl, 'icon_bg'),
+            description: getTextContent(toolEl, 'description'),
+            link: getTextContent(toolEl, 'link'),
+            price: getTextContent(toolEl, 'price'),
+            rating: parseFloat(getTextContent(toolEl, 'rating')),
+            reviews: parseInt(getTextContent(toolEl, 'reviews')),
+            popular: getTextContent(toolEl, 'popular') === 'true',
+            featured: getTextContent(toolEl, 'featured') === 'true',
+            tags: getTextContent(toolEl, 'tags').split(',')
+        };
+        tools.push(tool);
+    });
     
-    // Cache DOM elements for better performance
-    cacheElements() {
-        // Search elements
-        this.searchInput = document.getElementById('searchInput');
-        this.clearSearchBtn = document.getElementById('clearSearch');
-        
-        // Filter elements
-        this.categoryFilters = document.getElementById('categoryFilters');
-        this.toolCount = document.getElementById('toolCount');
-        
-        // Tools elements
-        this.toolsGrid = document.getElementById('toolsGrid');
-        this.sortSelect = document.getElementById('sortSelect');
-        this.viewButtons = document.querySelectorAll('.view__btn');
-        this.loadMoreBtn = document.getElementById('loadMoreBtn');
-        this.loadMoreContainer = document.getElementById('loadMoreContainer');
-        
-        // State elements
-        this.loading = document.getElementById('loading');
-        this.noResults = document.getElementById('noResults');
-        
-        // Modal elements
-        this.modal = document.getElementById('toolModal');
-        this.modalTitle = document.getElementById('modalTitle');
-        this.modalBody = document.getElementById('modalBody');
-        this.modalClose = document.getElementById('modalClose');
-        this.modalOverlay = document.getElementById('modalOverlay');
-        
-        // Navigation elements
-        this.submitToolBtn = document.getElementById('submitTool');
-        this.subscribeBtn = document.getElementById('subscribe');
-        this.clearFiltersBtn = document.getElementById('clearFilters');
-    }
+    return tools;
+}
+
+// Helper function to get text content from XML element
+function getTextContent(parent, tagName) {
+    const element = parent.querySelector(tagName);
+    return element ? element.textContent.trim() : '';
+}
+
+// Initialize event listeners
+function initializeEventListeners() {
+    // Search functionality
+    searchInput.addEventListener('input', debounce(handleSearch, 300));
+    document.querySelector('.search-btn').addEventListener('click', handleSearch);
     
-    // Bind event listeners
-    bindEvents() {
-        // Search events
-        this.searchInput.addEventListener('input', this.debounce(this.handleSearch.bind(this), 300));
-        this.clearSearchBtn.addEventListener('click', this.clearSearch.bind(this));
-        
-        // Filter events
-        this.sortSelect.addEventListener('change', this.handleSort.bind(this));
-        
-        // View toggle events
-        this.viewButtons.forEach(btn => {
-            btn.addEventListener('click', this.handleViewChange.bind(this));
+    // Category filters
+    categoryBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            currentCategory = e.target.dataset.category;
+            updateCategoryButtons();
+            applyFilters();
         });
-        
-        // Load more events
-        this.loadMoreBtn.addEventListener('click', this.loadMoreTools.bind(this));
-        
-        // Modal events
-        this.modalClose.addEventListener('click', this.closeModal.bind(this));
-        this.modalOverlay.addEventListener('click', this.closeModal.bind(this));
-        
-        // Clear filters
-        this.clearFiltersBtn.addEventListener('click', this.clearAllFilters.bind(this));
-        
-        // Navigation events
-        this.submitToolBtn.addEventListener('click', this.handleSubmitTool.bind(this));
-        this.subscribeBtn.addEventListener('click', this.handleSubscribe.bind(this));
-        
-        // Keyboard events
-        document.addEventListener('keydown', this.handleKeyboard.bind(this));
-        
-        // Resize events
-        window.addEventListener('resize', this.debounce(this.handleResize.bind(this), 250));
-    }
+    });
     
-    // Load initial data and render
-    loadInitialData() {
-        this.showLoading();
-        
-        // Simulate loading delay for better UX
-        setTimeout(() => {
-            this.renderCategories();
-            this.updateTools();
-            this.hideLoading();
-        }, 500);
-    }
+    // Price and rating filters
+    priceFilter.addEventListener('change', (e) => {
+        currentPriceFilter = e.target.value;
+        applyFilters();
+    });
     
-    // Render category filters
-    renderCategories() {
-        const categories = ToolsData.getCategories();
-        
-        this.categoryFilters.innerHTML = categories.map(category => `
-            <button 
-                class="filter__btn ${category.id === this.currentCategory ? 'filter__btn--active' : ''}"
-                data-category="${category.id}"
-                onclick="toolHub.handleCategoryFilter('${category.id}')"
-            >
-                <span class="filter__icon">
-                    <i class="${category.icon}"></i>
-                </span>
-                <span class="filter__name">${category.name}</span>
-                <span class="filter__count">${category.count}</span>
-            </button>
-        `).join('');
-    }
+    ratingFilter.addEventListener('change', (e) => {
+        currentRatingFilter = e.target.value;
+        applyFilters();
+    });
     
-    // Handle category filtering
-    handleCategoryFilter(categoryId) {
-        this.currentCategory = categoryId;
-        this.displayedTools = 0;
-        this.updateActiveCategory();
-        this.updateTools();
-        this.scrollToTools();
-    }
+    // Sort functionality
+    sortSelect.addEventListener('change', (e) => {
+        currentSort = e.target.value;
+        sortTools();
+        displayTools();
+    });
     
-    // Update active category visual state
-    updateActiveCategory() {
-        const filterButtons = this.categoryFilters.querySelectorAll('.filter__btn');
-        filterButtons.forEach(btn => {
-            btn.classList.toggle('filter__btn--active', 
-                btn.dataset.category === this.currentCategory);
-        });
-    }
+    // Load more functionality
+    loadMoreBtn.addEventListener('click', loadMoreTools);
     
-    // Handle search functionality
-    handleSearch(event) {
-        this.currentQuery = event.target.value;
-        this.displayedTools = 0;
-        this.updateTools();
-        this.updateSearchClearButton();
-    }
+    // Modal functionality
+    closeModal.addEventListener('click', closeToolModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeToolModal();
+    });
     
-    // Update search clear button visibility
-    updateSearchClearButton() {
-        if (this.currentQuery.trim()) {
-            this.clearSearchBtn.style.opacity = '1';
-            this.clearSearchBtn.style.pointerEvents = 'auto';
-        } else {
-            this.clearSearchBtn.style.opacity = '0';
-            this.clearSearchBtn.style.pointerEvents = 'none';
-        }
-    }
+    // Newsletter form
+    const newsletterForm = document.querySelector('.newsletter-form');
+    newsletterForm.addEventListener('submit', handleNewsletterSubmit);
     
-    // Clear search
-    clearSearch() {
-        this.searchInput.value = '';
-        this.currentQuery = '';
-        this.displayedTools = 0;
-        this.updateTools();
-        this.updateSearchClearButton();
-        this.searchInput.focus();
-    }
+    // Mobile navigation
+    const navToggle = document.querySelector('.nav-toggle');
+    const navMenu = document.querySelector('.nav-menu');
     
-    // Handle sorting
-    handleSort(event) {
-        this.currentSort = event.target.value;
-        this.displayedTools = 0;
-        this.updateTools();
-    }
-    
-    // Handle view change (grid/list)
-    handleViewChange(event) {
-        const newView = event.target.closest('.view__btn').dataset.view;
-        if (newView === this.currentView) return;
-        
-        this.currentView = newView;
-        this.updateViewButtons();
-        this.updateToolsDisplay();
-    }
-    
-    // Update view buttons state
-    updateViewButtons() {
-        this.viewButtons.forEach(btn => {
-            btn.classList.toggle('view__btn--active', 
-                btn.dataset.view === this.currentView);
+    if (navToggle) {
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
         });
     }
     
-    // Update tools display and filtering
-    updateTools() {
-        // Get filtered tools
-        this.filteredTools = ToolsData.searchTools(this.currentQuery, this.currentCategory);
-        this.filteredTools = ToolsData.sortTools(this.filteredTools, this.currentSort);
-        
-        // Update tool count
-        this.updateToolCount();
-        
-        // Reset display
-        this.displayedTools = 0;
-        this.toolsGrid.innerHTML = '';
-        
-        // Show tools or no results
-        if (this.filteredTools.length === 0) {
-            this.showNoResults();
-        } else {
-            this.hideNoResults();
-            this.loadMoreTools();
-        }
-    }
-    
-    // Update tool count display
-    updateToolCount() {
-        const count = this.filteredTools.length;
-        this.toolCount.textContent = count.toLocaleString();
-        
-        // Update page title
-        if (this.currentQuery) {
-            document.title = `${count} tools found - ToolHub`;
-        } else if (this.currentCategory !== 'all') {
-            const categoryName = ToolsData.getCategories()
-                .find(cat => cat.id === this.currentCategory)?.name || 'Tools';
-            document.title = `${categoryName} - ToolHub`;
-        } else {
-            document.title = 'ToolHub - Discover the Best Tools';
-        }
-    }
-    
-    // Load more tools (pagination)
-    loadMoreTools() {
-        const startIndex = this.displayedTools;
-        const endIndex = Math.min(startIndex + this.toolsPerPage, this.filteredTools.length);
-        const toolsToShow = this.filteredTools.slice(startIndex, endIndex);
-        
-        // Render tools with animation
-        toolsToShow.forEach((tool, index) => {
-            setTimeout(() => {
-                const toolElement = this.createToolCard(tool);
-                this.toolsGrid.appendChild(toolElement);
-                
-                // Trigger animation
-                requestAnimationFrame(() => {
-                    toolElement.style.opacity = '0';
-                    toolElement.style.transform = 'translateY(20px)';
-                    
-                    setTimeout(() => {
-                        toolElement.style.transition = 'all 0.3s ease-out';
-                        toolElement.style.opacity = '1';
-                        toolElement.style.transform = 'translateY(0)';
-                    }, 10);
+    // Smooth scrolling for navigation links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
                 });
-            }, index * 50);
+            }
         });
-        
-        this.displayedTools = endIndex;
-        this.updateLoadMoreButton();
-        this.updateToolsDisplay();
+    });
+}
+
+// Search functionality
+function handleSearch() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    
+    if (searchTerm === '') {
+        filteredTools = [...allTools];
+    } else {
+        filteredTools = allTools.filter(tool => 
+            tool.name.toLowerCase().includes(searchTerm) ||
+            tool.description.toLowerCase().includes(searchTerm) ||
+            tool.tags.some(tag => tag.toLowerCase().includes(searchTerm)) ||
+            tool.category.toLowerCase().includes(searchTerm)
+        );
     }
     
-    // Create tool card element
-    createToolCard(tool) {
-        const card = document.createElement('div');
-        card.className = `tool__card ${this.currentView === 'list' ? 'tool__card--list' : ''}`;
-        card.setAttribute('data-tool-id', tool.id);
-        
-        const stars = this.generateStars(tool.rating);
-        const badge = tool.badge ? `<div class="tool__badge tool__badge--${tool.badge}">${tool.badge}</div>` : '';
-        
-        card.innerHTML = `
-            ${badge}
-            <div class="tool__header">
-                <div class="tool__icon">
-                    <i class="${tool.icon}"></i>
-                </div>
-                <div class="tool__info">
-                    <h3 class="tool__name">${tool.name}</h3>
-                    <div class="tool__category">
-                        <i class="${TOOL_CATEGORIES[tool.category].icon}"></i>
-                        ${TOOL_CATEGORIES[tool.category].name}
-                    </div>
-                </div>
-            </div>
-            <p class="tool__description">${tool.description}</p>
-            <div class="tool__footer">
-                <a href="${tool.link}" class="tool__link" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">
-                    Visit Tool <i class="fas fa-external-link-alt"></i>
-                </a>
-                <div class="tool__meta">
-                    <div class="tool__rating">
-                        <div class="tool__stars">${stars}</div>
-                        <span>${tool.rating}</span>
-                    </div>
-                    <span class="tool__pricing">${tool.pricing}</span>
-                </div>
-            </div>
-        `;
-        
-        // Add click event for modal
-        card.addEventListener('click', () => this.openToolModal(tool));
-        
-        return card;
+    applyCurrentFilters();
+    currentPage = 1;
+    displayTools();
+    updateToolCount();
+}
+
+// Apply all current filters
+function applyFilters() {
+    let filtered = [...allTools];
+    
+    // Apply search filter
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    if (searchTerm) {
+        filtered = filtered.filter(tool => 
+            tool.name.toLowerCase().includes(searchTerm) ||
+            tool.description.toLowerCase().includes(searchTerm) ||
+            tool.tags.some(tag => tag.toLowerCase().includes(searchTerm)) ||
+            tool.category.toLowerCase().includes(searchTerm)
+        );
     }
     
-    // Generate star rating HTML
-    generateStars(rating) {
-        const fullStars = Math.floor(rating);
-        const hasHalfStar = rating % 1 >= 0.5;
-        const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-        
-        let starsHTML = '';
-        
-        // Full stars
-        for (let i = 0; i < fullStars; i++) {
-            starsHTML += '<i class="fas fa-star tool__star"></i>';
-        }
-        
-        // Half star
-        if (hasHalfStar) {
-            starsHTML += '<i class="fas fa-star-half-alt tool__star"></i>';
-        }
-        
-        // Empty stars
-        for (let i = 0; i < emptyStars; i++) {
-            starsHTML += '<i class="far fa-star tool__star tool__star--empty"></i>';
-        }
-        
-        return starsHTML;
+    // Apply category filter
+    if (currentCategory !== 'all') {
+        filtered = filtered.filter(tool => tool.category === currentCategory);
     }
     
-    // Update tools display layout
-    updateToolsDisplay() {
-        this.toolsGrid.className = `tools__grid ${this.currentView === 'list' ? 'tools__grid--list' : ''}`;
-        
-        // Update existing cards
-        const cards = this.toolsGrid.querySelectorAll('.tool__card');
-        cards.forEach(card => {
-            card.className = `tool__card ${this.currentView === 'list' ? 'tool__card--list' : ''}`;
-        });
+    // Apply price filter
+    if (currentPriceFilter !== 'all') {
+        filtered = filtered.filter(tool => tool.price === currentPriceFilter);
     }
+    
+    // Apply rating filter
+    if (currentRatingFilter !== 'all') {
+        const minRating = parseInt(currentRatingFilter);
+        filtered = filtered.filter(tool => tool.rating >= minRating);
+    }
+    
+    filteredTools = filtered;
+    sortTools();
+    currentPage = 1;
+    displayTools();
+    updateToolCount();
+}
+
+// Apply current filters without search
+function applyCurrentFilters() {
+    let filtered = [...filteredTools];
+    
+    // Apply category filter
+    if (currentCategory !== 'all') {
+        filtered = filtered.filter(tool => tool.category === currentCategory);
+    }
+    
+    // Apply price filter
+    if (currentPriceFilter !== 'all') {
+        filtered = filtered.filter(tool => tool.price === currentPriceFilter);
+    }
+    
+    // Apply rating filter
+    if (currentRatingFilter !== 'all') {
+        const minRating = parseInt(currentRatingFilter);
+        filtered = filtered.filter(tool => tool.rating >= minRating);
+    }
+    
+    filteredTools = filtered;
+    sortTools();
+}
+
+// Sort tools based on current sort option
+function sortTools() {
+    switch (currentSort) {
+        case 'popular':
+            filteredTools.sort((a, b) => {
+                if (a.popular && !b.popular) return -1;
+                if (!a.popular && b.popular) return 1;
+                return b.reviews - a.reviews;
+            });
+            break;
+        case 'rating':
+            filteredTools.sort((a, b) => b.rating - a.rating);
+            break;
+        case 'name':
+            filteredTools.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case 'newest':
+            // For demo purposes, reverse the array to simulate newest first
+            filteredTools.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+            break;
+        default:
+            break;
+    }
+}
+
+// Display tools in the grid
+function displayTools() {
+    const startIndex = (currentPage - 1) * toolsPerPage;
+    const endIndex = currentPage * toolsPerPage;
+    const toolsToShow = filteredTools.slice(0, endIndex);
+    
+    if (currentPage === 1) {
+        toolsGrid.innerHTML = '';
+    }
+    
+    const newTools = filteredTools.slice(startIndex, endIndex);
+    
+    newTools.forEach((tool, index) => {
+        setTimeout(() => {
+            const toolCard = createToolCard(tool);
+            toolsGrid.appendChild(toolCard);
+            toolCard.classList.add('fade-in');
+        }, index * 50);
+    });
     
     // Update load more button
-    updateLoadMoreButton() {
-        if (this.displayedTools >= this.filteredTools.length) {
-            this.loadMoreContainer.style.display = 'none';
-        } else {
-            this.loadMoreContainer.style.display = 'block';
-            const remaining = this.filteredTools.length - this.displayedTools;
-            this.loadMoreBtn.innerHTML = `
-                <i class="fas fa-plus"></i>
-                Load ${Math.min(remaining, this.toolsPerPage)} More Tools
-            `;
-        }
+    if (endIndex >= filteredTools.length) {
+        loadMoreBtn.style.display = 'none';
+    } else {
+        loadMoreBtn.style.display = 'block';
     }
     
-    // Open tool modal
-    openToolModal(tool) {
-        this.modalTitle.textContent = tool.name;
-        this.modalBody.innerHTML = this.generateModalContent(tool);
-        this.modal.classList.add('modal--active');
-        document.body.style.overflow = 'hidden';
-        
-        // Track modal open event
-        this.trackEvent('modal_open', { tool_id: tool.id, tool_name: tool.name });
+    // Show no results message if needed
+    if (filteredTools.length === 0) {
+        showNoResults();
     }
+}
+
+// Create tool card HTML
+function createToolCard(tool) {
+    const card = document.createElement('div');
+    card.className = 'tool-card';
+    card.onclick = () => openToolModal(tool);
     
-    // Generate modal content
-    generateModalContent(tool) {
-        const stars = this.generateStars(tool.rating);
-        const features = tool.features.map(feature => 
-            `<span class="feature__tag">${feature}</span>`
-        ).join('');
-        
-        return `
-            <div class="modal__tool">
-                <div class="modal__tool-header">
-                    <div class="modal__tool-icon">
-                        <i class="${tool.icon}"></i>
-                    </div>
-                    <div class="modal__tool-info">
-                        <div class="modal__tool-category">
-                            <i class="${TOOL_CATEGORIES[tool.category].icon}"></i>
-                            ${TOOL_CATEGORIES[tool.category].name}
-                        </div>
-                        <div class="modal__tool-rating">
-                            <div class="tool__stars">${stars}</div>
-                            <span>${tool.rating} out of 5</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="modal__tool-description">
-                    <h4>About ${tool.name}</h4>
-                    <p>${tool.description}</p>
-                </div>
-                
-                <div class="modal__tool-features">
-                    <h4>Key Features</h4>
-                    <div class="features__list">
-                        ${features}
-                    </div>
-                </div>
-                
-                <div class="modal__tool-pricing">
-                    <h4>Pricing</h4>
-                    <p class="pricing__info">${tool.pricing}</p>
-                </div>
-                
-                <div class="modal__tool-actions">
-                    <a href="${tool.link}" class="btn btn--primary btn--large" target="_blank" rel="noopener noreferrer">
-                        <i class="fas fa-external-link-alt"></i>
-                        Visit ${tool.name}
-                    </a>
-                    <button class="btn btn--outline btn--large" onclick="toolHub.shareTool('${tool.id}')">
-                        <i class="fas fa-share"></i>
-                        Share Tool
-                    </button>
-                </div>
+    const stars = generateStars(tool.rating);
+    const priceClass = tool.price === 'free' ? 'free' : tool.price === 'paid' ? 'paid' : 'freemium';
+    const priceText = tool.price === 'free' ? 'Free' : tool.price === 'paid' ? 'Paid' : 'Freemium';
+    
+    card.innerHTML = `
+        <div class="tool-header">
+            <div class="tool-icon" style="background: ${tool.iconBg}">
+                <i class="${tool.icon}"></i>
             </div>
-            
-            <style>
-                .modal__tool { }
-                .modal__tool-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-                .modal__tool-icon { width: 80px; height: 80px; border-radius: 1rem; background: var(--gray-100); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--primary-color); border: 2px solid var(--gray-200); }
-                .modal__tool-info { flex: 1; }
-                .modal__tool-category { color: var(--gray-600); font-size: 0.875rem; margin-bottom: 0.5rem; }
-                .modal__tool-rating { display: flex; align-items: center; gap: 0.5rem; }
-                .modal__tool-description, .modal__tool-features, .modal__tool-pricing { margin-bottom: 1.5rem; }
-                .modal__tool-description h4, .modal__tool-features h4, .modal__tool-pricing h4 { margin-bottom: 0.75rem; color: var(--gray-900); }
-                .features__list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-                .feature__tag { padding: 0.25rem 0.75rem; background: var(--primary-color); color: white; border-radius: 1rem; font-size: 0.75rem; font-weight: 500; }
-                .pricing__info { color: var(--gray-600); font-weight: 500; }
-                .modal__tool-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
-                @media (max-width: 640px) {
-                    .modal__tool-header { flex-direction: column; text-align: center; }
-                    .modal__tool-actions { flex-direction: column; }
-                }
-            </style>
-        `;
+            <div class="tool-info">
+                <h3>${tool.name}</h3>
+                <span class="tool-category">${getCategoryDisplayName(tool.category)}</span>
+            </div>
+        </div>
+        <p class="tool-description">${tool.description}</p>
+        <div class="tool-meta">
+            <div class="tool-rating">
+                <div class="stars">${stars}</div>
+                <span class="rating-text">${tool.rating} (${tool.reviews.toLocaleString()})</span>
+            </div>
+            <div class="tool-price ${priceClass}">${priceText}</div>
+        </div>
+        <div class="tool-footer">
+            <a href="${tool.link}" target="_blank" class="tool-link" onclick="event.stopPropagation()">Visit Site</a>
+            <button class="tool-link primary" onclick="event.stopPropagation(); openToolModal(this.dataset)" data-tool='${JSON.stringify(tool)}'>Learn More</button>
+        </div>
+    `;
+    
+    return card;
+}
+
+// Generate star rating HTML
+function generateStars(rating) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    let stars = '';
+    
+    for (let i = 0; i < fullStars; i++) {
+        stars += '<i class="fas fa-star"></i>';
     }
     
-    // Close modal
-    closeModal() {
-        this.modal.classList.remove('modal--active');
-        document.body.style.overflow = '';
+    if (hasHalfStar) {
+        stars += '<i class="fas fa-star-half-alt"></i>';
     }
     
-    // Clear all filters
-    clearAllFilters() {
-        this.currentCategory = 'all';
-        this.currentQuery = '';
-        this.searchInput.value = '';
-        this.displayedTools = 0;
-        this.updateActiveCategory();
-        this.updateSearchClearButton();
-        this.updateTools();
+    const emptyStars = 5 - Math.ceil(rating);
+    for (let i = 0; i < emptyStars; i++) {
+        stars += '<i class="far fa-star"></i>';
     }
     
-    // Show loading state
-    showLoading() {
-        this.loading.style.display = 'block';
-        this.toolsGrid.style.display = 'none';
-        this.loadMoreContainer.style.display = 'none';
+    return stars;
+}
+
+// Get display name for category
+function getCategoryDisplayName(category) {
+    const categoryNames = {
+        'writing': 'Writing & Editing',
+        'seo': 'SEO & Analytics',
+        'design': 'Design & Graphics',
+        'social': 'Social Media',
+        'email': 'Email Marketing',
+        'monetization': 'Monetization',
+        'hosting': 'Hosting & Domain',
+        'productivity': 'Productivity',
+        'plugins': 'WordPress Plugins',
+        'security': 'Security',
+        'backup': 'Backup & Recovery'
+    };
+    
+    return categoryNames[category] || category;
+}
+
+// Open tool modal
+function openToolModal(tool) {
+    if (typeof tool === 'string') {
+        tool = JSON.parse(tool);
     }
     
-    // Hide loading state
-    hideLoading() {
-        this.loading.style.display = 'none';
-        this.toolsGrid.style.display = 'grid';
-    }
+    const stars = generateStars(tool.rating);
+    const priceClass = tool.price === 'free' ? 'free' : tool.price === 'paid' ? 'paid' : 'freemium';
+    const priceText = tool.price === 'free' ? 'Free' : tool.price === 'paid' ? 'Paid' : 'Freemium';
     
-    // Show no results state
-    showNoResults() {
-        this.noResults.style.display = 'block';
-        this.toolsGrid.style.display = 'none';
-        this.loadMoreContainer.style.display = 'none';
-    }
-    
-    // Hide no results state
-    hideNoResults() {
-        this.noResults.style.display = 'none';
-        this.toolsGrid.style.display = 'grid';
-    }
-    
-    // Handle keyboard events
-    handleKeyboard(event) {
-        // ESC key closes modal
-        if (event.key === 'Escape' && this.modal.classList.contains('modal--active')) {
-            this.closeModal();
-        }
+    modalBody.innerHTML = `
+        <div class="tool-modal-header">
+            <div class="tool-icon" style="background: ${tool.iconBg}">
+                <i class="${tool.icon}"></i>
+            </div>
+            <div>
+                <h2>${tool.name}</h2>
+                <span class="tool-category">${getCategoryDisplayName(tool.category)}</span>
+            </div>
+        </div>
         
-        // Ctrl/Cmd + K focuses search
-        if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-            event.preventDefault();
-            this.searchInput.focus();
-        }
-    }
-    
-    // Handle window resize
-    handleResize() {
-        // Adjust grid layout if needed
-        this.updateToolsDisplay();
-    }
-    
-    // Scroll to tools section
-    scrollToTools() {
-        const toolsSection = document.querySelector('.tools');
-        if (toolsSection) {
-            toolsSection.scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    }
-    
-    // Handle submit tool
-    handleSubmitTool() {
-        alert('Tool submission feature coming soon! Please check back later.');
-        this.trackEvent('submit_tool_click');
-    }
-    
-    // Handle subscribe
-    handleSubscribe() {
-        const email = prompt('Enter your email to subscribe to our newsletter:');
-        if (email && this.isValidEmail(email)) {
-            alert('Thank you for subscribing! We\'ll keep you updated with the latest tools.');
-            this.trackEvent('newsletter_subscribe', { email: email });
-        } else if (email) {
-            alert('Please enter a valid email address.');
-        }
-    }
-    
-    // Share tool functionality
-    shareTool(toolId) {
-        const tool = ToolsData.getToolById(toolId);
-        if (!tool) return;
+        <div class="tool-modal-meta">
+            <div class="tool-rating">
+                <div class="stars">${stars}</div>
+                <span class="rating-text">${tool.rating} (${tool.reviews.toLocaleString()} reviews)</span>
+            </div>
+            <div class="tool-price ${priceClass}">${priceText}</div>
+        </div>
         
-        const shareData = {
-            title: `Check out ${tool.name}`,
-            text: tool.description,
-            url: `${window.location.origin}${window.location.pathname}?tool=${toolId}`
-        };
+        <div class="tool-modal-description">
+            <h3>About ${tool.name}</h3>
+            <p>${tool.description}</p>
+        </div>
         
-        if (navigator.share) {
-            navigator.share(shareData).catch(console.error);
-        } else {
-            // Fallback: copy to clipboard
-            const shareText = `${shareData.title}\n${shareData.text}\n${shareData.url}`;
-            navigator.clipboard.writeText(shareText).then(() => {
-                alert('Tool information copied to clipboard!');
-            }).catch(() => {
-                alert('Share functionality not available on this browser.');
-            });
-        }
+        <div class="tool-modal-tags">
+            <h3>Features</h3>
+            <div class="tag-list">
+                ${tool.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            </div>
+        </div>
         
-        this.trackEvent('tool_share', { tool_id: toolId, tool_name: tool.name });
-    }
+        <div class="tool-modal-actions">
+            <a href="${tool.link}" target="_blank" class="tool-link primary">Visit ${tool.name}</a>
+            <button class="tool-link" onclick="shareTool('${tool.name}', '${tool.link}')">Share Tool</button>
+        </div>
+    `;
     
-    // Setup intersection observer for analytics
-    setupIntersectionObserver() {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const toolId = entry.target.dataset.toolId;
-                    if (toolId) {
-                        this.trackEvent('tool_view', { tool_id: toolId });
-                    }
-                }
-            });
-        }, { threshold: 0.5 });
-        
-        // Observe tool cards as they're added
-        const observeCards = () => {
-            const cards = this.toolsGrid.querySelectorAll('.tool__card:not([data-observed])');
-            cards.forEach(card => {
-                card.setAttribute('data-observed', 'true');
-                observer.observe(card);
-            });
-        };
-        
-        // Run initially and after tool updates
-        setInterval(observeCards, 1000);
-    }
-    
-    // Utility: Debounce function
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-    
-    // Utility: Email validation
-    isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-    
-    // Analytics tracking
-    trackEvent(eventName, data = {}) {
-        // Basic analytics - replace with your analytics service
-        console.log('Analytics Event:', eventName, data);
-        
-        // Example: Google Analytics 4
-        if (typeof gtag !== 'undefined') {
-            gtag('event', eventName, data);
-        }
-        
-        // Example: Custom analytics
-        if (typeof analytics !== 'undefined') {
-            analytics.track(eventName, data);
-        }
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Close tool modal
+function closeToolModal() {
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Share tool functionality
+function shareTool(name, link) {
+    if (navigator.share) {
+        navigator.share({
+            title: `Check out ${name}`,
+            text: `I found this amazing tool for bloggers: ${name}`,
+            url: link
+        });
+    } else {
+        // Fallback: copy to clipboard
+        const text = `Check out ${name}: ${link}`;
+        navigator.clipboard.writeText(text).then(() => {
+            showMessage('Tool link copied to clipboard!');
+        });
     }
 }
 
-// URL parameter handling
-function handleURLParameters() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const toolId = urlParams.get('tool');
-    
-    if (toolId) {
-        const tool = ToolsData.getToolById(toolId);
-        if (tool) {
-            // Open tool modal after initialization
-            setTimeout(() => {
-                toolHub.openToolModal(tool);
-            }, 1000);
+// Load more tools
+function loadMoreTools() {
+    currentPage++;
+    displayTools();
+}
+
+// Update category buttons
+function updateCategoryButtons() {
+    categoryBtns.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.category === currentCategory) {
+            btn.classList.add('active');
         }
+    });
+}
+
+// Update tool count display
+function updateToolCount() {
+    const totalToolsElement = document.getElementById('total-tools');
+    if (totalToolsElement) {
+        totalToolsElement.textContent = `${allTools.length}+`;
     }
 }
 
-// Initialize application when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize ToolHub
-    window.toolHub = new ToolHub();
+// Show/hide loading spinner
+function showLoading(show) {
+    loadingSpinner.style.display = show ? 'flex' : 'none';
+}
+
+// Show error message
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = message;
     
-    // Handle URL parameters
-    handleURLParameters();
+    const container = document.querySelector('.container');
+    container.insertBefore(errorDiv, container.firstChild);
     
-    // Add loading performance metrics
-    window.addEventListener('load', () => {
-        if ('performance' in window) {
-            const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-            console.log(`Page loaded in ${loadTime}ms`);
-            
-            if (toolHub && typeof toolHub.trackEvent === 'function') {
-                toolHub.trackEvent('page_load_time', { load_time: loadTime });
+    setTimeout(() => {
+        errorDiv.remove();
+    }, 5000);
+}
+
+// Show success message
+function showMessage(message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'success-message';
+    messageDiv.textContent = message;
+    
+    const container = document.querySelector('.container');
+    container.insertBefore(messageDiv, container.firstChild);
+    
+    setTimeout(() => {
+        messageDiv.remove();
+    }, 3000);
+}
+
+// Show no results
+function showNoResults() {
+    toolsGrid.innerHTML = `
+        <div class="no-results">
+            <div class="no-results-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <h3>No tools found</h3>
+            <p>Try adjusting your search terms or filters.</p>
+            <button class="load-more-btn" onclick="clearAllFilters()">Clear Filters</button>
+        </div>
+    `;
+    loadMoreBtn.style.display = 'none';
+}
+
+// Clear all filters
+function clearAllFilters() {
+    searchInput.value = '';
+    currentCategory = 'all';
+    currentPriceFilter = 'all';
+    currentRatingFilter = 'all';
+    currentSort = 'popular';
+    
+    // Reset UI elements
+    priceFilter.value = 'all';
+    ratingFilter.value = 'all';
+    sortSelect.value = 'popular';
+    updateCategoryButtons();
+    
+    // Reset data and display
+    filteredTools = [...allTools];
+    sortTools();
+    currentPage = 1;
+    displayTools();
+    updateToolCount();
+}
+
+// Handle newsletter form submission
+function handleNewsletterSubmit(e) {
+    e.preventDefault();
+    const email = e.target.querySelector('input[type="email"]').value;
+    
+    // Simulate newsletter subscription
+    showMessage('Thanks for subscribing! You\'ll receive updates about new tools.');
+    e.target.reset();
+}
+
+// Update stats on page
+function updateStats() {
+    // Animate numbers on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                animateNumber(entry.target);
             }
+        });
+    });
+    
+    document.querySelectorAll('.stat-number').forEach(el => {
+        observer.observe(el);
+    });
+}
+
+// Animate number counter
+function animateNumber(element) {
+    const target = parseInt(element.textContent.replace(/\D/g, ''));
+    const duration = 2000;
+    const step = target / (duration / 16);
+    let current = 0;
+    
+    const timer = setInterval(() => {
+        current += step;
+        if (current >= target) {
+            current = target;
+            clearInterval(timer);
         }
+        
+        const suffix = element.textContent.includes('+') ? '+' : '';
+        const prefix = element.textContent.includes('K') ? 'K' : '';
+        element.textContent = Math.floor(current) + prefix + suffix;
+    }, 16);
+}
+
+// Debounce function for search
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Smooth scroll animation for better UX
+function smoothScrollTo(element) {
+    element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+// Add intersection observer for animations
+document.addEventListener('DOMContentLoaded', function() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('slide-up');
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+    
+    // Observe elements for animation
+    document.querySelectorAll('.tool-card').forEach(card => {
+        observer.observe(card);
     });
 });
 
-// Service Worker registration for PWA capabilities
+// Service Worker registration for PWA (optional)
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
@@ -671,9 +637,4 @@ if ('serviceWorker' in navigator) {
                 console.log('SW registration failed: ', registrationError);
             });
     });
-}
-
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ToolHub;
 }
